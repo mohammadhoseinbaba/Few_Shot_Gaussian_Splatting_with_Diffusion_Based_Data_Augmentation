@@ -53,6 +53,22 @@ FEWSHOT_MAX = 20  # the largest few-shot set; 5- and 10-shot sets are nested sub
 VARIANT_RE = re.compile(r"_(\d+)\.(?:jpg|jpeg|png)$", re.IGNORECASE)
 
 
+def load_registered(root: Path) -> List[str]:
+    """Registered frame names; rebuilt from the SfM model if registered.json is missing."""
+    scene = root / "my_scene_full"
+    f = scene / "registered.json"
+    if f.exists():
+        return json.loads(f.read_text())
+    sfm = scene / "sfm_superpoint+superglue"
+    if not (sfm / "images.bin").exists():
+        raise FileNotFoundError(f"{sfm} not found: run scripts/02_build_real_map.py first (it must finish successfully)")
+    import pycolmap
+    names = sorted(im.name for im in pycolmap.Reconstruction(sfm).images.values())
+    f.write_text(json.dumps(names))
+    print(f"[INFO] rebuilt {f} from the SfM model ({len(names)} images)")
+    return names
+
+
 def load_split(root: Path, stride: int = TEST_STRIDE) -> dict:
     """Real-image split shared by every script.
 
@@ -60,7 +76,7 @@ def load_split(root: Path, stride: int = TEST_STRIDE) -> dict:
     test:       held-out views (same for every condition)
     pool:       real training candidates for few-shot sampling (incomplete set: no gap, no test)
     """
-    registered = json.loads((root / "my_scene_full" / "registered.json").read_text())
+    registered = load_registered(root)
     gap = load_gap(root)
     test = compute_test_names(registered, gap, stride)
     pool = [n for n in sorted(registered) if not in_gap(n, gap) and n not in set(test)]
