@@ -1,0 +1,10 @@
+numpy
+pillow
+pyyaml
+opencv-python-headless
+diffusers
+transformers
+accelerate
+lpips
+matplotlib
+# also: hloc (github.com/cvg/Hierarchical-Localization), pycolmap, graphdeco gaussian-splatting (see notebooks/colab_pipeline.ipynb)
