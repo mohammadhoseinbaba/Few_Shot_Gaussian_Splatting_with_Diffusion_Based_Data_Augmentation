@@ -254,13 +254,20 @@ def main() -> None:
             run([sys.executable, "train.py", "-s", scene, "-m", model_dir, "--eval", "-r", args.resolution,
                  "--iterations", args.iterations, "--save_iterations", args.iterations,
                  "--test_iterations", args.iterations], args.gs_repo)
+            train_sec = time.time() - t0
+            run([sys.executable, "render.py", "-m", model_dir, "--skip_train"], args.gs_repo)
+            run([sys.executable, "metrics.py", "-m", model_dir], args.gs_repo)
+        except subprocess.CalledProcessError as e:
+            # e.g. diverged training that exhausts GPU memory: record it and go on with the next condition
+            print(f"[FAILED] {c['name']}: {e}", flush=True)
+            with open(runs / "failures.jsonl", "a") as f:
+                f.write(json.dumps({"name": c["name"], "error": str(e)[-300:],
+                                    "peak_gpu_mb": round(stats["peak_gpu_mb"])}) + "\n")
+            shutil.rmtree(scene / "images", ignore_errors=True)
+            continue
         finally:
             stop.set()
             th.join()
-        train_sec = time.time() - t0
-
-        run([sys.executable, "render.py", "-m", model_dir, "--skip_train"], args.gs_repo)
-        run([sys.executable, "metrics.py", "-m", model_dir], args.gs_repo)
 
         # Guard: GS must have evaluated exactly our test.txt views (not its own every-8th split)
         renders = sorted((model_dir / "test").glob("ours_*/renders/*.png"))
