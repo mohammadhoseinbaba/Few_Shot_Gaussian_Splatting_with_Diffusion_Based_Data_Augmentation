@@ -183,7 +183,10 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true", help="list conditions and exit")
     args = ap.parse_args()
 
-    runs = args.runs or args.root / "gs_runs"
+    # GS is launched from inside its own repo, so every path must be absolute
+    args.root = args.root.resolve()
+    args.gs_repo = args.gs_repo.resolve()
+    runs = (args.runs or args.root / "gs_runs").resolve()
     scenes_root = args.root / "gs_scenes"
     results = runs / "results.jsonl"
     runs.mkdir(parents=True, exist_ok=True)
