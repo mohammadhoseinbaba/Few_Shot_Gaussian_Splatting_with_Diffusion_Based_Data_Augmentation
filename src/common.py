@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 import re
 from pathlib import Path
 from typing import List, Optional
@@ -123,3 +124,37 @@ def camera_to_pinhole_params(camera) -> List[float]:
     if len(p) >= 4:
         return p[:4]
     raise ValueError(f"cannot convert camera model {camera.model_name} to PINHOLE")
+
+
+def _pnp_inliers(ret: dict) -> Optional[int]:
+    if not isinstance(ret, dict) or not ret.get("success"):
+        return None
+    if "num_inliers" in ret:
+        return int(ret["num_inliers"])
+    mask = ret.get("inliers")
+    return int(sum(bool(x) for x in mask)) if mask is not None else None
+
+
+def read_inliers(results: Path) -> dict:
+    """Per-query PnP inlier counts from hloc's <results>_logs.pkl (empty dict if unavailable).
+
+    With covisibility clustering the log of a query holds `log_clusters` and `best_cluster`;
+    without it the PnP result sits directly under `PnP_ret`.
+    """
+    log = Path(str(results) + "_logs.pkl")
+    if not log.exists():
+        return {}
+    with open(log, "rb") as f:
+        logs = pickle.load(f)
+    out = {}
+    for q, entry in logs.get("loc", {}).items():
+        if not isinstance(entry, dict):
+            continue
+        if "log_clusters" in entry and entry.get("best_cluster") is not None:
+            ret = entry["log_clusters"][entry["best_cluster"]].get("PnP_ret", {})
+        else:
+            ret = entry.get("PnP_ret", {})
+        n = _pnp_inliers(ret)
+        if n is not None:
+            out[q] = n
+    return out

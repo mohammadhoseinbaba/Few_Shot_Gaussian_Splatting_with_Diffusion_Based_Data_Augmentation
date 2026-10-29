@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import pickle
 import shutil
 import sys
 from pathlib import Path
@@ -30,22 +29,7 @@ import pycolmap
 from hloc import extract_features, localize_sfm, match_features, pairs_from_retrieval
 from PIL import Image
 
-from src.common import camera_to_pinhole_params, compute_test_names, frame_number, in_gap, list_images, load_gap
-
-
-def read_inliers(results: Path) -> dict[str, int]:
-    """Per-query PnP inlier counts from hloc's <results>_logs.pkl (empty dict if unavailable)."""
-    log = Path(str(results) + "_logs.pkl")
-    if not log.exists():
-        return {}
-    with open(log, "rb") as f:
-        logs = pickle.load(f)
-    out = {}
-    for q, entry in logs.get("loc", {}).items():
-        ret = entry.get("PnP_ret", {}) if isinstance(entry, dict) else {}
-        if ret.get("success") and "num_inliers" in ret:
-            out[q] = int(ret["num_inliers"])
-    return out
+from src.common import read_inliers, camera_to_pinhole_params, compute_test_names, frame_number, in_gap, list_images, load_gap
 
 
 def inject(root: Path, strategy: str, test_stride: int, min_inliers: int, num_matched: int) -> None:
