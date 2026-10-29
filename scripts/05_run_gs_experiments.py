@@ -6,7 +6,7 @@ Conditions
     full                      all real training frames (>=100), the full-N baseline
     fewN_real                 N real frames, no synthetic (0%)
     fewN_<strategy>_<ratio>   N real + S = round(N*ratio/100) synthetic images from 04_inject_synthetic.py
-Controls shared by every condition: the SAME held-out real test views (src/common.py: load_split),
+Controls shared by every condition: the SAME held-out real test views (outside the gap and inside it) (src/common.py: load_split),
 nested few-shot sets, identical GS hyper-parameters, synthetic images only on the training side.
 
 Point-cloud init (--init-points visible, default): only 3D points seen by >= 2 *selected real training*
@@ -150,6 +150,22 @@ def make_conditions(args, split: dict, injected_files: dict) -> list:
     return conds
 
 
+def subset_metrics(model_dir: Path, test_sorted: list, gap_set: set) -> dict:
+    """Mean metrics over test views inside vs outside the removed gap (GS renders test cams in sorted-name order)."""
+    try:
+        pv = next(iter(json.loads((model_dir / "per_view.json").read_text()).values()))
+    except Exception:
+        return {}
+    out = {}
+    for tag, pick in (("gap", True), ("out", False)):
+        idx = [f"{i:05d}.png" for i, n in enumerate(test_sorted) if (n in gap_set) == pick]
+        for m in ("PSNR", "SSIM", "LPIPS"):
+            vals = [pv[m][k] for k in idx if k in pv.get(m, {})]
+            if vals:
+                out[f"{m}_{tag}"] = sum(vals) / len(vals)
+    return out
+
+
 def done_names(results: Path) -> set:
     if not results.exists():
         return set()
@@ -159,7 +175,8 @@ def done_names(results: Path) -> set:
 def write_summary(results: Path, out_csv: Path) -> None:
     rows = [json.loads(l) for l in results.read_text().splitlines() if l.strip()]
     keys = ["name", "n_real", "strategy", "ratio", "num_synth", "num_train_images", "train_time_min", "peak_gpu_mb",
-            "PSNR", "SSIM", "LPIPS", "num_test", "iterations", "resolution"]
+            "PSNR", "SSIM", "LPIPS", "PSNR_out", "SSIM_out", "LPIPS_out", "PSNR_gap", "SSIM_gap", "LPIPS_gap",
+            "num_test", "iterations", "resolution"]
     with open(out_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
         w.writeheader()
@@ -192,7 +209,8 @@ def main() -> None:
     runs.mkdir(parents=True, exist_ok=True)
 
     split = load_split(args.root)
-    print(f"real: {len(split['registered'])} registered, pool {len(split['pool'])}, test {len(split['test'])}")
+    print(f"real: {len(split['registered'])} registered, pool {len(split['pool'])}, "
+          f"test {len(split['test'])} ({len(split['test_out'])} outside gap + {len(split['test_gap'])} inside)")
 
     injected_files, injected_models = {}, {}
     for strat in args.strategies:
@@ -251,7 +269,8 @@ def main() -> None:
                                "test split is not being read from test.txt")
         res = json.loads((model_dir / "results.json").read_text())
         m = next(iter(res.values()))
-        row = {**{k: c[k] for k in ("name", "n_real", "strategy", "ratio")},
+        sub = subset_metrics(model_dir, sorted(split["test"]), set(split["test_gap"]))
+        row = {**{k: c[k] for k in ("name", "n_real", "strategy", "ratio")}, **sub,
                "num_synth": meta["num_synth"], "num_train_images": meta["num_real_train"] + meta["num_synth"],
                "num_test": meta["num_test"], "train_time_min": round(train_sec / 60, 2),
                "peak_gpu_mb": round(stats["peak_gpu_mb"]), "PSNR": m["PSNR"], "SSIM": m["SSIM"], "LPIPS": m["LPIPS"],

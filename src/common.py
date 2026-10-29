@@ -74,14 +74,18 @@ def load_split(root: Path, stride: int = TEST_STRIDE) -> dict:
     """Real-image split shared by every script.
 
     registered: frames registered in the full SfM map (written by 02_build_real_map.py)
-    test:       held-out views (same for every condition)
+    test:       held-out views (same for every condition): test_out (outside the gap) + test_gap (inside it,
+                never seen by ANY condition, including full-N)
     pool:       real training candidates for few-shot sampling (incomplete set: no gap, no test)
     """
     registered = load_registered(root)
     gap = load_gap(root)
-    test = compute_test_names(registered, gap, stride)
+    test_out = compute_test_names(registered, gap, stride)  # views next to training frames
+    test_gap = sorted(n for n in registered if in_gap(n, gap))[::stride]  # views inside the removed block
+    test = sorted(test_out + test_gap)
     pool = [n for n in sorted(registered) if not in_gap(n, gap) and n not in set(test)]
-    return {"registered": sorted(registered), "gap": gap, "test": test, "pool": pool}
+    return {"registered": sorted(registered), "gap": gap, "test": test, "test_out": test_out,
+            "test_gap": test_gap, "pool": pool}
 
 
 def fewshot_names(pool: List[str], n: int) -> List[str]:

@@ -77,13 +77,15 @@ def plots(rows: list[dict], out: Path) -> None:
 
 
 def table(rows: list[dict], out: Path) -> None:
-    hdr = "| condition | real | synth | time [min] | mem [MB] | PSNR | SSIM | LPIPS |\n|---|---|---|---|---|---|---|---|\n"
+    hdr = ("| condition | real | synth | time [min] | mem [MB] | PSNR | SSIM | LPIPS | PSNR near-train | PSNR in-gap |\n"
+           "|---|---|---|---|---|---|---|---|---|---|\n")
     best = {m: (max if m != "LPIPS" else min)(r[m] for r in rows) for m in METRICS}
     lines = []
     for r in sorted(rows, key=lambda r: (r["n_real"], r["strategy"], r["ratio"])):
         cells = [f"{r[m]:.4f}" if r[m] != best[m] else f"**{r[m]:.4f}**" for m in METRICS]
         lines.append(f"| {r['name']} | {r['n_real']} | {r['num_synth']} | {r['train_time_min']} | {r['peak_gpu_mb']} | "
-                     + " | ".join(cells) + " |")
+                     + " | ".join(cells)
+                     + f" | {r.get('PSNR_out', float('nan')):.3f} | {r.get('PSNR_gap', float('nan')):.3f} |")
     (out / "results_table.md").write_text(hdr + "\n".join(lines) + "\n")
 
 

@@ -30,7 +30,7 @@ Stock graphdeco `readColmapSceneInfo(..., llffhold=8)` never reads `sparse/0/tes
 ## Experimental design
 
 * Full set: 180 real frames (blurriest 10% dropped). A contiguous middle block (60 frames) is removed from the incomplete set (`gap.json`).
-* Held-out test: every 8th registered real frame outside the gap (15 views), the same for **every** condition.
+* Held-out test (23 views, the same for **every** condition): 15 views = every 8th registered frame outside the gap (close to training frames) + 8 views = every 8th frame *inside* the removed gap (never seen by any condition, not even full-N). Metrics are reported overall and split near-train / in-gap (`*_out`, `*_gap` in the CSV).
 * Few-shot sets: 5 ⊂ 10 ⊂ 20 frames spread evenly over the remaining pool (105 frames).
 * Synthetic images are generated only from the 20-shot real frames, localized in the full real map (HLoc: NetVLAD + SuperPoint + SuperGlue), and added to the **training side only**. `S = round(N * ratio)`.
 * Metrics: PSNR, SSIM, LPIPS; training time; peak GPU memory.

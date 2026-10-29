@@ -119,7 +119,7 @@ A video of a static indoor scene (82.3\,s, $1920{\times}1080$) was recorded with
 were sampled uniformly (about 2.4\,fps), downscaled to 1280\,px width, and the 10\% blurriest (variance of the
 Laplacian) were dropped, leaving $180$ real frames (full set, $\geq 100$ as required). A contiguous block of 60 frames
 in the middle of the sequence was removed from the incomplete set to simulate a coverage gap. Held-out test views
-are every 8th registered real frame outside the gap ($15$ views); they are identical in every condition.
+are every 8th registered real frame outside the gap ($15$ views, close to training frames) plus every 8th frame \emph{inside} the removed gap ($8$ views, in regions no condition has observed); the $23$ views are identical in every condition and are reported overall and separately for the two groups. Since the gap views are held out everywhere, full-$N$ trains on $157$ frames.
 The training pool is the remaining $105$ frames. The 20-shot set is 20 frames evenly spread over the pool; the 10- and 5-shot
 sets are nested subsets ($5\subset10\subset20$), so differences between sizes are not caused by different frames.
 
@@ -133,7 +133,7 @@ few-shot training frames). Filenames encode the strategy, the source real frame 
 (\texttt{<strategy>\_frame\_XXXX\_<variant>.jpg}), linking each synthetic view to its approximate real view.
 
 \subsection{Conditions and training}
-Conditions are: the full-$N$ baseline (all $165$ real training frames); the real-only few-shot baseline (0\%);
+Conditions are: the full-$N$ baseline (all $157$ real training frames); the real-only few-shot baseline (0\%);
 and few-shot plus $S=\mathrm{round}(N\cdot r)$ synthetic images, with $r\in\{25,50,100,200\}\%$ (and optionally
 below 25\%) for each of the four strategies. Synthetic images are added only to the training side. The same
 graphdeco 3DGS implementation and hyper-parameters are used for every condition
@@ -166,8 +166,8 @@ Factor & Values \\
 Few-shot size $N$ & 20 (main), 10, 5 \\
 Strategy & inpainting, outpainting, depth-guided, edge-guided \\
 Synthetic ratio & 0\%, 25\%, 50\%, 100\%, 200\% (+ below 25\%) \\
-Baselines & full-$N$ (165 real), few-shot real-only \\
-Test views & 15 real held-out views, identical everywhere \\
+Baselines & full-$N$ (157 real), few-shot real-only \\
+Test views & 23 real held-out views (15 near-train, 8 in-gap), identical everywhere \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -191,7 +191,7 @@ strategy to relate the geometric consistency of generated views to the final rec
 \toprule
 Condition & Train img. & Time [min] & Mem. [MB] & PSNR & SSIM & LPIPS \\
 \midrule
-full-$N$ (165 real) & 165 & \tbd & \tbd & \tbd & \tbd & \tbd \\
+full-$N$ (157 real) & 157 & \tbd & \tbd & \tbd & \tbd & \tbd \\
 few-shot real only & 20 & \tbd & \tbd & \tbd & \tbd & \tbd \\
 inpaint 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
 outpaint 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
