@@ -69,7 +69,8 @@ def gpu_poller(stop: threading.Event, stats: dict, interval: float = 1.0) -> Non
 
 
 def run(cmd: list, cwd: Path) -> None:
-    print(">>>", " ".join(shlex.quote(str(c)) for c in cmd), flush=True)
+    cmd = [str(c) for c in cmd]
+    print(">>>", " ".join(shlex.quote(c) for c in cmd), flush=True)
     subprocess.run(cmd, cwd=str(cwd), check=True)
 
 

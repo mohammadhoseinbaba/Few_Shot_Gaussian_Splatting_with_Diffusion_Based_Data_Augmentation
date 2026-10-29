@@ -127,11 +127,12 @@ def camera_to_pinhole_params(camera) -> List[float]:
 
 
 def _pnp_inliers(ret: dict) -> Optional[int]:
-    if not isinstance(ret, dict) or not ret.get("success"):
+    # newer pycolmap results carry num_inliers (and no "success" key); failed ones have success=False
+    if not isinstance(ret, dict) or ret.get("success") is False:
         return None
     if "num_inliers" in ret:
         return int(ret["num_inliers"])
-    mask = ret.get("inliers")
+    mask = ret.get("inliers", ret.get("inlier_mask"))
     return int(sum(bool(x) for x in mask)) if mask is not None else None
 
 
