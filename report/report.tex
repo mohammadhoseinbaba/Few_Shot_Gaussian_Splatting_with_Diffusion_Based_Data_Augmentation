@@ -134,10 +134,9 @@ few-shot training frames). Filenames encode the strategy, the source real frame 
 
 \subsection{Conditions and training}
 Conditions are: the full-$N$ baseline (all $157$ real training frames); the real-only few-shot baseline (0\%);
-and few-shot plus $S=\mathrm{round}(N\cdot r)$ synthetic images, with $r\in\{25,50,100,200\}\%$ (and optionally
-below 25\%) for each of the four strategies. Synthetic images are added only to the training side. The same
+and few-shot plus $S=\mathrm{round}(N\cdot r)$ synthetic images, with $r\in\{25,50,100\}\%$ for each of the four strategies. Synthetic images are added only to the training side. The same
 graphdeco 3DGS implementation and hyper-parameters are used for every condition
-(\tbd{} iterations, half resolution). Experiments ran on a free cloud GPU (\tbd{}).
+(15\,000 iterations, half resolution, \texttt{--init-points visible}). Experiments ran on a free Google Colab GPU (NVIDIA T4, about 15\,GB).
 
 \subsection{Evaluation protocol}
 \label{sec:protocol}
@@ -158,14 +157,14 @@ logged per condition. Two protocol issues of the earlier code were corrected:
 
 \begin{table}[H]
 \centering
-\caption{Experiment grid (main setting: 20-shot; 5- and 10-shot as additional few-shot sizes).}
+\caption{Experiment grid (20-shot setting, 14 conditions).}
 \begin{tabular}{ll}
 \toprule
 Factor & Values \\
 \midrule
-Few-shot size $N$ & 20 (main), 10, 5 \\
+Few-shot size $N$ & 20 (5- and 10-shot sets are defined in the code but were not run) \\
 Strategy & inpainting, outpainting, depth-guided, edge-guided \\
-Synthetic ratio & 0\%, 25\%, 50\%, 100\%, 200\% (+ below 25\%) \\
+Synthetic ratio & 0\%, 25\%, 50\%, 100\% \\
 Baselines & full-$N$ (157 real), few-shot real-only \\
 Test views & 23 real held-out views (15 near-train, 8 in-gap), identical everywhere \\
 \bottomrule
@@ -179,26 +178,42 @@ strategy to relate the geometric consistency of generated views to the final rec
 % ------------------------------------------------------------------
 \section{Results}
 
-\textbf{All numbers below are pending the experiments (\tbd).}
-
 \subsection{Quantitative results}
+
+Table~\ref{tab:res} lists all conditions. ``Near'' and ``gap'' are PSNR on the 15 test views next to training frames and the 8
+test views inside the removed block. Depth-guided synthesis at 25\% and 100\% diverged during training (loss above 0.4,
+GPU memory exhausted at iteration 5\,300 and 6\,800) and produced no model; they are shown as ``fail''.
 
 \begin{table}[H]
 \centering
-\caption{20-shot GS results on held-out real views (to be filled from \texttt{results/results\_table.md}).}
+\caption{20-shot GS results on the 23 held-out real views (15\,000 iterations, half resolution, Colab T4). Best value of each metric in bold.}
+\label{tab:res}
 \small
-\begin{tabular}{lcccccc}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccccccc}
 \toprule
-Condition & Train img. & Time [min] & Mem. [MB] & PSNR & SSIM & LPIPS \\
+Condition & Train img. & Time [min] & Mem. [MB] & PSNR $\uparrow$ & SSIM $\uparrow$ & LPIPS $\downarrow$ & PSNR near / gap \\
 \midrule
-full-$N$ (157 real) & 157 & \tbd & \tbd & \tbd & \tbd & \tbd \\
-few-shot real only & 20 & \tbd & \tbd & \tbd & \tbd & \tbd \\
-inpaint 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
-outpaint 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
-depth 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
-edge 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
+full-$N$           & 157 & 19.0 & 5001 & \textbf{36.74} & \textbf{0.969} & \textbf{0.167} & 37.36 / 35.59 \\
+20-shot real only  &  20 & 17.0 & 3941 & 30.47 & 0.936 & 0.209 & 34.61 / 22.73 \\
+\midrule
+inpaint 25\%       &  25 & 16.4 & 3337 & 30.23 & 0.934 & 0.217 & 34.22 / 22.75 \\
+inpaint 50\%       &  30 & 16.1 & 3433 & 29.28 & 0.930 & 0.226 & 33.22 / 21.90 \\
+inpaint 100\%      &  40 & 16.1 & 3361 & 28.09 & 0.926 & 0.242 & 31.74 / 21.23 \\
+\midrule
+outpaint 25\%      &  25 & 17.1 & 3375 & 28.59 & 0.922 & 0.238 & 32.15 / 21.91 \\
+outpaint 50\%      &  30 & 17.3 & 3873 & 25.96 & 0.913 & 0.258 & 28.71 / 20.82 \\
+outpaint 100\%     &  40 & 17.2 & 3783 & 24.61 & 0.895 & 0.292 & 27.72 / 18.77 \\
+\midrule
+depth 25\%         &  25 & \multicolumn{6}{c}{fail (diverged, out of GPU memory)} \\
+depth 50\%         &  30 & 36.9 & 9083 & 18.42 & 0.849 & 0.426 & 20.08 / 15.31 \\
+depth 100\%        &  40 & \multicolumn{6}{c}{fail (diverged, out of GPU memory)} \\
+\midrule
+edge 25\%          &  25 & 17.5 & 2953 & 25.54 & 0.902 & 0.270 & 28.53 / 19.92 \\
+edge 50\%          &  30 & 18.1 & 3259 & 19.68 & 0.817 & 0.363 & 22.65 / 14.11 \\
+edge 100\%         &  40 & 16.5 & 2909 & 15.78 & 0.788 & 0.440 & 17.03 / 13.44 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsection{Metric plots}
@@ -210,21 +225,59 @@ edge 25\% / 50\% / 100\% & 25/30/40 & \tbd & \tbd & \tbd & \tbd & \tbd \\
 \end{figure}
 
 \subsection{Main observations}
-\tbd{} (does augmentation help vs.\ the real-only baseline; trend with ratio; which strategy is best; relation to
-localization success and inliers; effect of 5/10/20-shot).
+\begin{itemize}[noitemsep]
+  \item \textbf{Headroom.} Full-$N$ reaches 36.7\,dB, 6.3\,dB above the 20-shot real-only baseline (30.5\,dB). The gap is
+        much larger on the views inside the removed block (35.6 versus 22.7\,dB), where the few-shot model has no
+        nearby observation. This is the room that synthetic views could in principle fill.
+  \item \textbf{No strategy beat the real-only baseline.} Every synthetic condition has lower PSNR, SSIM and higher
+        LPIPS than 20-shot real only. The only near tie is inpainting at 25\% (30.23 versus 30.47\,dB; 22.75 versus
+        22.73\,dB in the gap), a difference that I cannot separate from noise with a single run.
+  \item \textbf{More synthetic images hurt more.} For all strategies that trained, PSNR decreases monotonically with the
+        ratio (inpaint: 30.2, 29.3, 28.1\,dB; outpaint: 28.6, 26.0, 24.6\,dB; edge: 25.5, 19.7, 15.8\,dB).
+  \item \textbf{Strategy ranking.} Inpainting $>$ outpainting $>$ edge-guided $>$ depth-guided. The ranking follows
+        how much the generated image departs from the real source view: inpainting keeps most pixels of a real frame,
+        outpainting adds a new strip, and the two ControlNet strategies regenerate the whole image.
+  \item \textbf{Training fit versus test quality.} With synthetic data the training PSNR stays high at low ratios
+        (inpaint 25\%: 40.2\,dB, outpaint 25\%: 39.5\,dB, against 42.1\,dB for real only) while the test PSNR falls: the
+        model fits the generated views but they are not consistent with the real geometry. At high ratios even the
+        training fit degrades (edge 100\%: 18.2\,dB, depth 50\%: 25.5\,dB), showing contradictory supervision.
+  \item \textbf{Cost.} Training time is about 16--18\,min and 3--4\,GB peak memory for every converged few-shot run,
+        so synthetic images add little cost (the generation time of the diffusion models is not included). Full-$N$
+        needs 19\,min and 5.0\,GB. Depth 50\% was the exception (36.9\,min, 9.1\,GB) because the Gaussian count grew
+        abnormally while optimization struggled; two depth runs did not finish.
+\end{itemize}
 
 \subsection{Localization of synthetic views}
-\tbd{} (per-strategy localization success rate and mean PnP inliers from \texttt{injection\_metadata.json}).
+All 40 generated images of every strategy (20 sources, 2 variants each) were localized in the real map
+(success rate 100\% for the four strategies). This number is not discriminative: feature matching returns a
+pose even for images that are geometrically wrong, so success is a necessary but not a sufficient condition for a
+useful training view. Per-image PnP inlier counts are written by the injection script, but I did not use them to
+filter images in the reported runs; an inlier-based selection is the natural next experiment.
 
 
 % ------------------------------------------------------------------
 \section{Discussion}
 
-\tbd{} To be written from the results. Questions to answer: Is there an optimal ratio, including below 25\%? Does the
-benefit depend on perceptual quality or on geometric consistency (localization inliers)? Which strategy is
-least harmful, and why (e.g.\ small-pan guided synthesis keeps the geometry close to a real view, whereas
-inpainting changes content inside the frame)? How does the effect change with the few-shot size? Compare with
-the web-video-model findings of~\cite{mxhrnxz2026fewshot} without treating them as the same protocol.
+In this scene and with this protocol, diffusion-generated views did not help few-shot 3DGS; they were neutral at best
+(inpainting at 25\%) and increasingly harmful with more images. There is therefore no optimal ratio above 25\%, and
+ratios below 25\% (not tested) are the only region where a small benefit could still exist.
+
+The benefit depends on geometric consistency, not on perceptual quality. A 3DGS optimization treats each training
+image as an exact observation from its estimated pose. A generated image that looks plausible but differs in
+layout or texture from what the pose implies adds contradictory constraints; the optimizer either fits it with
+view-dependent floaters, which lowers test quality, or fails to converge (depth-guided runs). The two ControlNet
+strategies regenerate the entire image from a depth or edge map of a panned frame, so fine structure is invented
+independently in each image, which explains why they are the least consistent. Inpainting leaves most pixels
+equal to the real frame, so its views stay close to real observations and cost the least.
+
+These results agree with the earlier project~\cite{mxhrnxz2026fewshot}, where the real-only baseline was also best, even though
+the generators (web video models versus Stable Diffusion strategies) and the protocol differ and the numbers are not comparable.
+The in-gap views show that the missing coverage is exactly where the augmentation was meant to help; yet the best synthetic
+condition did not improve them (22.75 versus 22.73\,dB), because the generated views are derived from frames that
+do not observe that region.
+
+Only the 20-shot setting was run; whether augmentation helps more with 5 shots, where real coverage is much lower,
+remains untested.
 
 
 % ------------------------------------------------------------------
@@ -234,9 +287,18 @@ the web-video-model findings of~\cite{mxhrnxz2026fewshot} without treating them 
 \centering
 \resultfig[width=\linewidth]{results/panel_few20_ratio50.png}
 \caption{Held-out views (rows). Columns: ground truth, full-$N$, 20-shot real only, and each strategy at 50\%.}
+\label{fig:panel}
 \end{figure}
 
-\tbd{} (artifacts: blur, floaters, duplicated structures, texture inconsistencies; generated images versus their nearby real source views).
+\begin{figure}[H]
+\centering
+\resultfig[width=\linewidth]{results/synthetic_examples.png}
+\caption{A real source frame and the synthetic images generated from it by each strategy.}
+\end{figure}
+
+Figure~\ref{fig:panel} compares renders of the same held-out views across conditions, each annotated with its per-view PSNR.
+The visual ordering should match Table~\ref{tab:res}: renders degrade from the real-only model to inpainting, outpainting and the
+ControlNet strategies. Depth-guided is shown only at 50\%, because the 25\% and 100\% runs diverged.
 
 
 % ------------------------------------------------------------------
@@ -244,7 +306,8 @@ the web-video-model findings of~\cite{mxhrnxz2026fewshot} without treating them 
 
 \begin{itemize}[noitemsep]
   \item One static indoor scene and one capture; no repetitions over seeds, so small metric differences may be noise.
-  \item Free-tier compute: reduced resolution and iterations relative to the original 3DGS setting.
+  \item Free-tier compute: reduced resolution and iterations relative to the original 3DGS setting. Only the 20-shot
+        set and ratios up to 100\% were run; 5/10-shot and 200\% were left out for time.
   \item Stable Diffusion 1.5 backbones generate at about 768\,px and are upsampled to the map resolution; stronger
         backbones or video models could behave differently.
   \item Synthetic views are localized with feature matching; images whose content was changed (inpainting) may be
@@ -256,11 +319,15 @@ the web-video-model findings of~\cite{mxhrnxz2026fewshot} without treating them 
 % ------------------------------------------------------------------
 \section{Conclusion}
 
-\tbd{} Summary of whether and when diffusion-augmented views help few-shot 3DGS, the best strategy and ratio, and
-future work (geometry-aware generation, inlier-based filtering, multiple scenes and seeds).
+Diffusion-based augmentation was tested on few-shot 3DGS with four strategies on my own capture. Full-$N$ reached
+36.7\,dB and 20-shot real-only 30.5\,dB, but no synthetic condition improved on real-only. Inpainting at 25\% was neutral,
+every strategy lost quality as the ratio grew, and depth- and edge-guided synthesis were the most harmful (two depth runs
+diverged). The evidence points to geometric consistency, not appearance, as the limiting factor. Future work: filtering
+synthetic views by PnP inliers or reprojection error, ratios below 25\%, 5/10-shot sets, multi-view-consistent generators
+(video or multi-view diffusion), and repetitions over seeds and scenes.
 
 \section*{Code availability}
-\tbd{} URL of this repository (\texttt{github.com/mohammadhoseinbaba/Few\_Shot\_Gaussian\_Splatting\_with\_Diffusion\_Based\_Data\_Augmentation}).
+Repository: \texttt{github.com/mohammadhoseinbaba/Few\_Shot\_Gaussian\_Splatting\_with\_Diffusion\_Based\_Data\_Augmentation}.
 Credit: structure adapted from~\cite{mxhrnxz2026fewshot}.
 
 \bibliographystyle{plain}

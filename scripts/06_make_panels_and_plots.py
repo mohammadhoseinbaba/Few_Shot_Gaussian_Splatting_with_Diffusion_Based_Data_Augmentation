@@ -19,7 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from PIL import Image
 
-from src.common import evenly_sample_names, load_split
+from src.common import evenly_sample_names, fewshot_names, frame_number, load_split
 
 COLORS = {"inpaint": "#0072B2", "outpaint": "#D55E00", "depth": "#009E73", "edge": "#CC79A7"}  # Okabe-Ito
 METRICS = {"PSNR": "PSNR [dB] (higher is better)", "SSIM": "SSIM (higher is better)", "LPIPS": "LPIPS (lower is better)"}
@@ -143,6 +143,31 @@ def panels(rows: list[dict], runs: Path, out: Path, root: Path, n_views: int, ra
             plt.close(fig)
 
 
+def synthetic_examples(root: Path, out: Path, n_sources: int = 3) -> None:
+    """Row = one real source frame; columns = the real frame and its first synthetic variant per strategy."""
+    split = load_split(root)
+    strategies = [s for s in COLORS if (root / "synth" / s / "input").is_dir()]
+    if not strategies:
+        return
+    sources = evenly_sample_names(fewshot_names(split["pool"], 20), n_sources)
+    fig, axs = plt.subplots(len(sources), 1 + len(strategies), figsize=(2.6 * (1 + len(strategies)), 1.6 * len(sources) + 0.4),
+                            squeeze=False)
+    for i, src in enumerate(sources):
+        k = frame_number(src)
+        paths = [("real source", root / "my_scene_full" / "input" / src)]
+        paths += [(s, root / "synth" / s / "input" / f"{s}_frame_{k:04d}_00.jpg") for s in strategies]
+        for j, (title, p) in enumerate(paths):
+            ax = axs[i][j]
+            ax.axis("off")
+            if p.exists():
+                ax.imshow(Image.open(p))
+            if i == 0:
+                ax.set_title(title, fontsize=8)
+    fig.subplots_adjust(wspace=0.02, hspace=0.02)
+    fig.savefig(out / "synthetic_examples.png", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=Path, default=Path("data/outputs"))
@@ -157,6 +182,7 @@ def main() -> None:
     plots(rows, args.out)
     table(rows, args.out)
     panels(rows, runs, args.out, args.root, args.views, args.panel_ratio)
+    synthetic_examples(args.root, args.out)
     print(f"wrote plots, table and panels to {args.out}")
 
 
